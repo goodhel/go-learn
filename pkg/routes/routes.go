@@ -3,6 +3,7 @@ package routes
 import (
 	"go-privy/pkg/auth"
 	"go-privy/pkg/middleware"
+	"go-privy/pkg/user"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,10 +18,10 @@ func Routes() *gin.Engine {
 		v1.POST("/register", auth.Register)
 
 		// User
-		v1.GET("/user", middleware.AuthMiddleware(), auth.ListUser)
-		v1.GET("/user/me", middleware.AuthMiddleware(), auth.UserbyId)
-		v1.PUT("/user", middleware.AuthMiddleware(), auth.EditUser)
-		v1.DELETE("/user/:id", middleware.AuthMiddleware(), auth.DeleteUser)
+		v1.GET("/user", middleware.AuthMiddleware(), user.ListUser)
+		v1.GET("/user/me", middleware.AuthMiddleware(), user.UserbyId)
+		v1.PUT("/user", middleware.AuthMiddleware(), user.EditUser)
+		v1.DELETE("/user/:id", middleware.AuthMiddleware(), user.DeleteUser)
 	}
 
 	return router
