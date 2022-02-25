@@ -1,7 +1,11 @@
 package jwt
 
 import (
+	"fmt"
 	"go-privy/pkg/database"
+	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -18,13 +22,14 @@ type TokenDetails struct {
 }
 
 type AccessDetails struct {
-	UserId uint64
+	UserId   uint64
+	AccessId string
 }
 
 var jwtKey = []byte("go-secret-key")
 var jwtKeyRefresh = []byte("go-secret-key-refresh")
 
-func CreateJwt(id int32, email string) (*TokenDetails, error) {
+func CreateJwt(id uint64, email string) (*TokenDetails, error) {
 	var err error
 	td := &TokenDetails{}
 	td.AtExpires = time.Now().Add(time.Minute * 15).Unix()
@@ -59,7 +64,7 @@ func CreateJwt(id int32, email string) (*TokenDetails, error) {
 	return td, nil
 }
 
-func CreateAuth(id int32, td *TokenDetails, c *gin.Context) error {
+func CreateAuth(id uint64, td *TokenDetails, c *gin.Context) error {
 	_, err := database.DB.Exec("INSERT INTO token (userId, accessId, refresh_token) VALUES (?,?,?)", id, td.AccessId, td.RefreshToken)
 
 	if err != nil {
@@ -67,4 +72,86 @@ func CreateAuth(id int32, td *TokenDetails, c *gin.Context) error {
 	}
 
 	return nil
+}
+
+// Extrac token from the Header
+func ExtracToken(r *http.Request) string {
+	bearerToken := r.Header.Get("Authorization")
+	// normally Authorization Token Bearer askjdklasjd
+	strArr := strings.Split(bearerToken, " ")
+	if len(strArr) == 2 {
+		return strArr[1]
+	}
+
+	return ""
+}
+
+// Verify token signin method
+func VerifyToken(r *http.Request) (*jwt.Token, error) {
+	tokenString := ExtracToken(r)
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		//Make sure that the token method conform to "SigningMethodHMAC"
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return jwtKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
+}
+
+// Check Validity of the token
+func TokenValid(r *http.Request) error {
+	token, err := VerifyToken(r)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := token.Claims.(jwt.Claims); !ok && !token.Valid {
+		return err
+	}
+
+	return nil
+}
+
+// Extract Token Metadata
+func ExtracTokenMetadata(r *http.Request) (*AccessDetails, error) {
+	token, err := VerifyToken(r)
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if ok && token.Valid {
+		accessId, ok := claims["a"].(string)
+		if !ok {
+			return nil, err
+		}
+		userId, err := strconv.ParseUint(fmt.Sprintf("%.f", claims["i"]), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		return &AccessDetails{
+			UserId:   userId,
+			AccessId: accessId,
+		}, nil
+	}
+
+	return nil, err
+}
+
+func FetchAuth(authD *AccessDetails) (uint64, error) {
+	var userId uint64
+
+	err := database.DB.QueryRow("SELECT userId FROM token WHERE accessId = ? ", authD.AccessId).Scan(&userId)
+	if err != nil {
+		return 0, err
+	}
+
+	return userId, nil
 }
