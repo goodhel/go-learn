@@ -49,8 +49,7 @@ func ListUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Not Found"})
 		return
 	}
-
-	c.JSON(http.StatusOK, users)
+	c.JSON(http.StatusOK, gin.H{"message": "Get list user successfully", "data": users})
 }
 
 func UserbyId(c *gin.Context) {
@@ -71,7 +70,7 @@ func UserbyId(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, gin.H{"message": "Get detail user successfully", "data": user})
 }
 
 func EditUser(c *gin.Context) {
