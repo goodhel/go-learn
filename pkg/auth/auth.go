@@ -1,10 +1,13 @@
 package auth
 
 import (
+	"fmt"
 	"go-privy/pkg/database"
 	"go-privy/pkg/jwt"
 	"net/http"
+	"strconv"
 
+	jwt_go "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -26,6 +29,10 @@ type CreateUser struct {
 type LoginUser struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type RefreshToken struct {
+	RefreshToken string `json:"refresh_token"`
 }
 
 func Login(c *gin.Context) {
@@ -121,4 +128,108 @@ func CheckPassHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 
 	return err == nil
+}
+
+func Logout(c *gin.Context) {
+	tokenAuth, err := jwt.ExtracTokenMetadata(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	accessId := tokenAuth.AccessId
+
+	result, err := database.DB.Exec("DELETE FROM token WHERE accessId = ?", accessId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	affectedRows, err := result.RowsAffected()
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data := map[string]int64{
+		"affectedRows": affectedRows,
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Delete user successfully", "data": data})
+}
+
+func Refresh(c *gin.Context) {
+	var body RefreshToken
+
+	if err := c.BindJSON(&body); err != nil {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid json provided"})
+		return
+	}
+
+	// Verify Token
+	var jwtKeyRefresh = []byte("go-secret-key-refresh")
+	token, err := jwt_go.Parse(body.RefreshToken, func(token *jwt_go.Token) (interface{}, error) {
+		//Make sure that the token method conform to "SigningMethodHMAC"
+		if _, ok := token.Method.(*jwt_go.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return jwtKeyRefresh, nil
+	})
+	//if there is an error, the token must have expired
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token expired"})
+		return
+	}
+	//is token valid?
+	if _, ok := token.Claims.(jwt_go.Claims); !ok && !token.Valid {
+		c.JSON(http.StatusUnauthorized, err)
+		return
+	}
+	//Since token is valid
+	claims, ok := token.Claims.(jwt_go.MapClaims) //the token claims should conform to MapClaims
+	if ok && token.Valid {
+		email, ok := claims["e"].(string) //convert the interface to string
+		if !ok {
+			c.JSON(http.StatusUnprocessableEntity, err)
+			return
+		}
+		userId, err := strconv.ParseUint(fmt.Sprintf("%.f", claims["i"]), 10, 64)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, "Error occurred")
+			return
+		}
+		//Create new pairs of refresh and access tokens
+		token, err := jwt.CreateJwt(userId, email)
+
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, err.Error())
+			return
+		}
+
+		// Delete Old Token
+		del, err := database.DB.Exec("DELETE FROM token WHERE userId = ? AND refresh_token = ?",
+			userId, body.RefreshToken)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, err.Error())
+			return
+		}
+
+		fmt.Print(del)
+
+		authErr := jwt.CreateAuth(userId, token, &gin.Context{})
+
+		if authErr != nil {
+			c.JSON(http.StatusUnprocessableEntity, err.Error())
+			return
+		}
+
+		tokens := map[string]string{
+			"access_token":  token.AccessToken,
+			"refresh_token": token.RefreshToken,
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "Refresh token succesfully", "data": tokens})
+	} else {
+		c.JSON(http.StatusUnauthorized, "refresh expired")
+	}
 }

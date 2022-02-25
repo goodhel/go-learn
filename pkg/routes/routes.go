@@ -15,7 +15,9 @@ func Routes() *gin.Engine {
 	{
 		// Auth
 		v1.POST("/login", auth.Login)
+		v1.POST("/logout", middleware.AuthMiddleware(), auth.Logout)
 		v1.POST("/register", auth.Register)
+		v1.POST("/refresh", auth.Refresh)
 
 		// User
 		v1.GET("/user", middleware.AuthMiddleware(), user.ListUser)
