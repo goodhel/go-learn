@@ -2,8 +2,8 @@ package auth
 
 import (
 	"fmt"
-	"go-privy/pkg/database"
-	"go-privy/pkg/jwt"
+	"go-golangra/pkg/database"
+	"go-golangra/pkg/jwt"
 	"net/http"
 	"strconv"
 

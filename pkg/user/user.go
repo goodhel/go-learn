@@ -2,9 +2,9 @@ package user
 
 import (
 	"database/sql"
-	"go-privy/pkg/auth"
-	"go-privy/pkg/database"
-	"go-privy/pkg/jwt"
+	"go-golangra/pkg/auth"
+	"go-golangra/pkg/database"
+	"go-golangra/pkg/jwt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

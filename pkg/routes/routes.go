@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"go-privy/pkg/auth"
-	"go-privy/pkg/middleware"
-	"go-privy/pkg/saldo"
-	"go-privy/pkg/user"
+	"go-golangra/pkg/auth"
+	"go-golangra/pkg/middleware"
+	"go-golangra/pkg/saldo"
+	"go-golangra/pkg/user"
 
 	"github.com/gin-gonic/gin"
 )

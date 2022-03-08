@@ -2,8 +2,8 @@ package main
 
 import (
 	"database/sql"
-	"go-privy/pkg/database"
-	"go-privy/pkg/routes"
+	"go-golangra/pkg/database"
+	"go-golangra/pkg/routes"
 	"log"
 	"time"
 

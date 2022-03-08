@@ -2,7 +2,7 @@ package jwt
 
 import (
 	"fmt"
-	"go-privy/pkg/database"
+	"go-golangra/pkg/database"
 	"net/http"
 	"strconv"
 	"strings"

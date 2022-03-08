@@ -20,7 +20,7 @@ func BuildDBConfig() *DBConfig {
 		Host:     "127.0.0.1",
 		Port:     3306,
 		User:     "root",
-		DBName:   "privyid",
+		DBName:   "golangra",
 		Password: "",
 	}
 

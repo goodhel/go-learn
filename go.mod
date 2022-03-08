@@ -1,4 +1,4 @@
-module go-privy
+module go-golangra
 
 go 1.17
 

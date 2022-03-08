@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"go-privy/pkg/database"
-	"go-privy/pkg/jwt"
+	"go-golangra/pkg/database"
+	"go-golangra/pkg/jwt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

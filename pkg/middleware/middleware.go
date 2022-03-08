@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"go-privy/pkg/jwt"
+	"go-golangra/pkg/jwt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
